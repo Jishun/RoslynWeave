@@ -6,17 +6,17 @@ As of now when this project is created, there is no way to intercept Roslyn comp
 
 # Usage
 - Take the code and compile (I'll possibly make a nuget later if I'm able to abstract it well)
-- Execute `RoslynWeaveCli` and give it an argument as the path to a solution file, it will scan all the cs files and put the generated file into `AopManaged` folder of each project, for example [ExampleClass](RoslynWeaveTest/ExampleClass.cs) -> [AopManaged/ExampleClass](RoslynWeaveTest/AopManaged/ExampleClass.cs)
+- Execute `RoslynWeaveCli` and give it an argument as the path to a solution file, it will scan all the cs files and put the generated file into `AopManaged` folder of each project, for example [ExampleClass](RoslynWeaveTests/ExampleClass.cs) -> [AopManaged/ExampleClass](RoslynWeaveTests/AopManaged/ExampleClass.cs)
 - The above process will skip `program.cs` files
 - In `program.cs` change the using statement of the affected namespace and append `_AopWrapped` to it to use AOP, it will not take any changes if the namespace is unchanged, so that you can flip the use of it.
-- Implement a class inheriting [DefaultAopContext](RoslynWeave/RoslynWeave/DefaultAopContext.cs), override the 6 intercept points to handle your AOP
+- Implement a class inheriting [DefaultAopContext](RoslynWeave/DefaultAopContext.cs), override the 6 intercept points to handle your AOP
 * EnteringMethodAsync
 * EnteringMethod
 * ExitingMethodAsync
 * ExitingMethod
 * TryHandleExceptionAsync
 * TryHandleException
-- Give this class to [AopContextLocator](RoslynWeave/RoslynWeave/AopContextLocator.cs) with a factory method
+- Give this class to [AopContextLocator](RoslynWeave/AopContextLocator.cs) with a factory method
 - In the context class, the `CurrentFrame` object will provide metadata of current method, including the MehtodBase, as well as the parameters passed in
 - Weavers and Aspects and Advice will come to help later
 ```
