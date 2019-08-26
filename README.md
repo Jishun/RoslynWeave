@@ -70,7 +70,7 @@ As of now when this project is created, there is no way to intercept Roslyn comp
 Therefore in order to use it, use the `_AopWrapped` namespace in the program
 
 #How to customize it
-- [program.cs of the Cli](RoslynWeave/RoslynWeaveCli/program.cs) has a very basic main to iterate through files,  take the file make your own cli to find the files and store the output in your way
+- [program.cs of the Cli](RoslynWeave/RoslynWeaveCli/Program.cs) has a very basic main to iterate through files,  take the file make your own cli to find the files and store the output in your way
 - Use the default wrapper to manage the code then derive from [DefaultAopContext](RoslynWeave/RoslynWeave/DefaultAopContext.cs) to make interception
 
 - Or, Derive from [WrapperTemplate.cs](RoslynWeave/RoslynWeave/CodeRewriter/WrapperTemplate.cs), give the source code as string to [TemplateExtractor.cs](RoslynWeave/RoslynWeave/CodeRewriter/TemplateExtractor.cs) with a factory method.
