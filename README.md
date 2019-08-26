@@ -2,9 +2,9 @@
 An AOP code generator
 
 # Initiative
-As of now when this project is created, there is no way to intercept Roslyn compilation process, what most people wanted is simply to have a point where we can plug in some pre-compile logic to re-write the code in order to archive AOP, it took too long for .Net to respond so that I have to make another approach to trick it.
+As of now when this project is created, there is no way to intercept Roslyn compilation process, what most people wanted is simply to have a point where we can plug in some pre-compile logic to re-write the code in order to enable AOP, it took too long for .Net to respond so that I have to make another approach to trick it.
 
-#Usage
+# Usage
 - Take the code and compile (I'll possibly make a nuget later if I'm able to abstract it well)
 - Execute `RoslynWeaveCli` and give it an argument as the path to a solution file, it will scan all the cs files and put the generated file into `AopManaged` folder of each project
 - The above process will skip `program.cs` files
