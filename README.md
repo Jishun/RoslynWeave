@@ -67,6 +67,12 @@ As of now when this project is created, there is no way to intercept Roslyn comp
     }
 ```
 
+# In-place mode
+- Use [CodeRewriterConfig.cs](RoslynWeave/CodeRewriter/CodeRewriterConfig.cs)
+- If you don't mind seeing the generated try/catch in every method, set 'Track = true' to let the re-writer to re-write your original file, it will try to track the method with a first line of comment to prevent wrapping the method multiple times.
+- It provides option to enable tracking, the `TrackingStatement` contains a comment(default "//Aop omit"), the rewriter uses a simplest way to detect the first line comments, if the first line of the method is this comment, it skips re-writing the method.
+- Set the `NameSpaceSuffix` to null or Empty so that namespace stays unchanged.
+- MAKE SURE you have source control to track the change so that you can revert the change if it's not desired.
 
 
 ## How it works

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -117,14 +117,21 @@ namespace RoslynWeave
             {
                 return original;
             }
+            if (_config.Track)
+            {
+                if (original.Statements.First().GetLeadingTrivia().ToString().Trim() == _config.TrackingStatement)
+                {
+                    return original;
+                }
+            }
             if (!_config.UseAsyncIntercepters)
             {
                 async = false;
             }
+            var template = (async ? Templates.Async : Templates.Sync);
             var ps = string.Join(',', parameters.Parameters
                 .Where(p => !p.Modifiers.Any(m => m.IsKind(SyntaxKind.OutKeyword)))
                 .Select(p => $"({($"\"{p.Identifier.ValueText}\"",$"(object){p.Identifier.ValueText} ?? typeof({p.Type})")})"));
-            var template = (async ? Templates.Async : Templates.Sync);
             var outs = string.Join(' ', parameters.Parameters.Where(p => p.Modifiers.Any(m => m.IsKind(SyntaxKind.OutKeyword)))
                 .Select(p => $"{p.Identifier.ValueText} = default;"));
             var defaultStatement = ParseStatement($"{outs}{defaultReturn}");
@@ -134,6 +141,10 @@ namespace RoslynWeave
                 nodes = nodes.Prepend(template.MetaData);
             }
             var ret = template.Body.TrackNodes(nodes);
+            if (_config.Track)
+            {
+                ret = ret.WithOpenBraceToken(Token(TriviaList(), SyntaxKind.OpenBraceToken, TriviaList(Comment(Environment.NewLine + _config.TrackingStatement))));
+            }
             ret = ret.ReplaceNode(ret.GetCurrentNode(template.MetaData), template.MetaData.AddArgumentListArguments(ParseArgumentList(ps).Arguments.ToArray()));
             foreach (var item in template.OriginalBodies)
             {
