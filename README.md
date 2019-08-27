@@ -9,13 +9,15 @@ As of now when this project is created, there is no way to intercept Roslyn comp
 - Execute `RoslynWeaveCli` and give it an argument as the path to a solution file, it will scan all the cs files and put the generated file into `AopManaged` folder of each project, for example [ExampleClass.cs](RoslynWeaveTests/ExampleClass.cs) -> [AopManaged/ExampleClass.cs](RoslynWeaveTests/AopManaged/ExampleClass.cs)
 - The above process will skip `program.cs` files
 - In `program.cs` change the using statement of the affected namespace and append `_AopWrapped` to it to use AOP, it will not take any changes if the namespace is unchanged, so that you can flip the use of it.
-- Implement a class inheriting [DefaultAopContext](RoslynWeave/DefaultAopContext.cs), override the 6 intercept points to handle your AOP
+- Implement a class inheriting [DefaultAopContext](RoslynWeave/DefaultAopContext.cs), override the 8 intercept points to handle your AOP
 * EnteringMethodAsync
 * EnteringMethod
 * ExitingMethodAsync
 * ExitingMethod
 * TryHandleExceptionAsync
 * TryHandleException
+* NeedsProfileAsync
+* NeedsProfile
 - Give this class to [AopContextLocator](RoslynWeave/AopContextLocator.cs) with a factory method
 - In the context class, the `CurrentFrame` object will provide metadata of current method, including the MehtodBase, as well as the parameters passed in
 - `GetCurrentStackTrace()` returns the stack trace based on all frames it went through.
@@ -26,9 +28,9 @@ As of now when this project is created, there is no way to intercept Roslyn comp
     {
         public MyContext()
         {
-            //A very basic example to describle how to let the AopContextLoctor resolve the Context. 
-            //You can add some more logics such as letting your IOC container to resolve. 
-            //AopContextLocator resolves once per aync context so that the the AopContext is scoped. 
+            //A very basic example to describle how to let the AopContextLoctor resolve the Context.
+            //You can add some more logics such as letting your IOC container to resolve.
+            //AopContextLocator resolves once per aync context so that the the AopContext is scoped.
             //Will possibly implement more complex logic for resolving to handle more scenarios
             AopContextLocator.Initialize(() => this);
         }
@@ -84,7 +86,7 @@ Therefore in order to use it, use the `_AopWrapped` namespace in the program
 - it will replace `Body();` statement with original method body,
 - it will replace `Default();` with a default value return statement, this is used when exception happened
 - you can plug multiple copies of the original body, just be aware of the scopes so that the variable names don't get conflicted.
-- Multiple default value return (`Default();`)is also allowed and will not likely to cause conflict 
+- Multiple default value return (`Default();`)is also allowed and will not likely to cause conflict
 - [CodeRewriterConfig.cs](RoslynWeave/CodeRewriter/CodeRewriterConfig.cs) contains a very basic configuration, will extend it soon.
 
 ## Limitations

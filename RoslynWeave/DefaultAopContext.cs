@@ -10,20 +10,18 @@ namespace RoslynWeave
     {
         protected virtual AsyncLocal<AopContextFrame> CurrentFrame { get; set; } =  new AsyncLocal<AopContextFrame>();
 
-        public virtual bool Profile { get; set; } = false;
-
         public virtual string Location => String.Join(".", GetCurrentStackTrace().Reverse().Select(f => f.ToString()).ToArray());
 
         public void EnterFrame(MethodMetadata metadata)
         {
-            var ret = new AopContextFrame(metadata, Profile);
+            var ret = new AopContextFrame(metadata, NeedsProfile(metadata));
             EnteringMethod(metadata);
             Push(ret);
         }
 
         public async Task EnterFrameAsync(MethodMetadata metadata)
         {
-            var ret = new AopContextFrame(metadata, Profile);
+            var ret = new AopContextFrame(metadata, await NeedsProfileAsync(metadata));
             await EnteringMethodAsync(metadata);
             Push(ret);
         }
@@ -84,6 +82,16 @@ namespace RoslynWeave
         protected virtual void ExitingMethod(MethodMetadata method, double timeSpent)
         {
 
+        }
+
+        protected virtual Task<bool> NeedsProfileAsync(MethodMetadata method)
+        {
+            return Task.FromResult(false);
+        }
+
+        protected virtual bool NeedsProfile(MethodMetadata method)
+        {
+            return false;
         }
 
         protected virtual IEnumerable<AopContextFrame> GetCurrentStackTrace()
