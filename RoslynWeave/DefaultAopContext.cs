@@ -17,15 +17,15 @@ namespace RoslynWeave
         public void EnterFrame(MethodMetadata metadata)
         {
             var ret = new AopContextFrame(metadata, Profile);
-            Push(ret);
             EnteringMethod(metadata);
+            Push(ret);
         }
 
         public async Task EnterFrameAsync(MethodMetadata metadata)
         {
             var ret = new AopContextFrame(metadata, Profile);
-            Push(ret);
             await EnteringMethodAsync(metadata);
+            Push(ret);
         }
 
         public virtual void ExitFrame()
