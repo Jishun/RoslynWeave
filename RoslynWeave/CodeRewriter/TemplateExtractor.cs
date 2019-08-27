@@ -31,7 +31,7 @@ namespace RoslynWeave
             if (templateSource == null)
             {
                 using (var sr = new StreamReader(typeof(TemplateExtractor).Assembly
-                    .GetManifestResourceStream("RoslynWeave.CodeReriter.WrapperTemplate.cs")))
+                    .GetManifestResourceStream("RoslynWeave.CodeRewriter.WrapperTemplate.cs")))
                 {
                     sourceCode = sr.ReadToEnd();
                     

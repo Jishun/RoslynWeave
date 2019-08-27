@@ -13,13 +13,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" Version="3.2.1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.2.1" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.2.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="CodeReriter\" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="CodeReriter\WrapperTemplate.cs" />
+    <EmbeddedResource Include="CodeRewriter\WrapperTemplate.cs" />
   </ItemGroup>
 </Project>
