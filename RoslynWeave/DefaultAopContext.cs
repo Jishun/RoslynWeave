@@ -12,14 +12,14 @@ namespace RoslynWeave
 
         public virtual string Location => String.Join(".", GetCurrentStackTrace().Reverse().Select(f => f.ToString()).ToArray());
 
-        public void EnterFrame(MethodMetadata metadata)
+        public virtual void EnterFrame(MethodMetadata metadata)
         {
             var ret = new AopContextFrame(metadata, NeedsProfile(metadata));
             EnteringMethod(metadata);
             Push(ret);
         }
 
-        public async Task EnterFrameAsync(MethodMetadata metadata)
+        public virtual async Task EnterFrameAsync(MethodMetadata metadata)
         {
             var ret = new AopContextFrame(metadata, await NeedsProfileAsync(metadata));
             await EnteringMethodAsync(metadata);
