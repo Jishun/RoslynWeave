@@ -103,12 +103,4 @@ namespace RoslynWeave
             return Path.Combine(projectRoot, WrapInFolder);
         }
     }
-
-    public class MyContext: DefaultAopContext
-    {
-        public override void ExitFrame()
-        {
-            base.ExitFrame();
-        }
-    }
 }
