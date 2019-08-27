@@ -100,7 +100,7 @@ namespace RoslynWeave
                 var item = file.NormalizePath();
                 if (new Uri(CombindPath(newRoot)).IsBaseOf(new Uri(item)))
                 {
-                    //continue;
+                    continue;
                 }
                 if (new Uri(CombindPath(projectRoot, "bin")).IsBaseOf(new Uri(item)))
                 {
