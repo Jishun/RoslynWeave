@@ -5,32 +5,44 @@ using System.Linq;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using Microsoft.Build.Construction;
+using Microsoft.Extensions.Configuration;
 
 namespace RoslynWeave
 {
     static class Program
     {
-        const string WrapInFolder = "AopManaged";
-        static bool Inplace = true;
+        public class CliConfig
+        {
+            public string Output { get; set; }
+            public string Solution { get; set; } = "../../../../RoslynWeave.sln";
+            public bool Inplace { get; set; }
+            public bool Replicate { get; set; }
+            public string SolutionPath => Path.GetDirectoryName(Path.GetFullPath(Solution));
+        }
+        static CliConfig config = new CliConfig();
         static void Main(string[] args)
         {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json"), optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .AddCommandLine(args, new Dictionary<string, string>() { { "-o", "Output" }, { "-i", "Inplace" }, { "-s", "Solution" }, { "-r", "Replicate" } })
+                .Build();
+            configuration.Bind(config);
             try
             {
-                var solutionPath = "../../../../RoslynWeave.sln";
-                if (args.Length > 0)
+                config.Solution = Path.GetFullPath(config.Solution);
+                if (config.Replicate)
                 {
-                    solutionPath = args[0];
+                    var targetFolder = Path.Combine(Directory.GetParent(config.SolutionPath).FullName, config.Output);
+                    CopySolution(config.SolutionPath, targetFolder);
+                    config.Solution = Path.Combine(targetFolder, Path.GetFileName(config.Solution));
+                    config.Inplace = true;
                 }
 
-                if (!Path.IsPathRooted(solutionPath))
-                {
-                    solutionPath = Path.Combine(Directory.GetCurrentDirectory(), solutionPath);
-                }
-
-                var config = new CodeRewriterConfig()
-                {Track = Inplace};
-                var rewriter = new CodeRewriter(config, new TemplateExtractor());
-                var solution = SolutionFile.Parse(solutionPath);
+                var writerconfig = new CodeRewriterConfig() {Track = config.Inplace};
+                var rewriter = new CodeRewriter(writerconfig, new TemplateExtractor());
+                var solution = SolutionFile.Parse(config.Solution);
                 foreach (var project in solution.ProjectsInOrder)
                 {
                     if (project.ProjectName == typeof(CodeRewriter).Namespace)
@@ -41,24 +53,12 @@ namespace RoslynWeave
                     var newRoot = GetWrappedPath(project);
                     foreach (var document in GetDocuments(project))
                     {
-                        string newCode = null;
-                        using (var sr = new StreamReader(document))
-                        {
-                            newCode = rewriter.Wrap(sr.ReadToEnd());
-                        }
-
                         var projectRoot = Path.GetDirectoryName(project.AbsolutePath);
                         var relative = Path.GetRelativePath(projectRoot, document);
                         var newPath = Path.Combine(newRoot, relative);
                         Directory.CreateDirectory(Path.GetDirectoryName(newPath));
-                        using (var sw = new StreamWriter(newPath))
-                        {
-                            if (!Inplace)
-                            {
-                                sw.WriteLine("//RoslynWeave auto generated code.");
-                            }
-                            sw.Write(newCode);
-                        }
+                        var newCode = rewriter.Wrap(File.ReadAllText(document));
+                        File.WriteAllText(newPath, config.Inplace ? newCode : "//RoslynWeave auto generated code." + Environment.NewLine + newCode);
                     }
                 }
 
@@ -68,36 +68,20 @@ namespace RoslynWeave
                     {
                         continue;
                     }
-                    if (!Inplace && Directory.Exists(GetWrappedPath(project)))
+                    if (!config.Inplace && Directory.Exists(GetWrappedPath(project)))
                     {
                         foreach (var item in Directory.GetFiles(GetWrappedPath(project), "*.cs", SearchOption.AllDirectories))
                         {
-                            string newCode = null;
-                            using (var sr = new StreamReader(item))
-                            {
-                                newCode = rewriter.UpdateNamespaces(sr.ReadToEnd());
-                            }
-
-                            using (var sw = new StreamWriter(item))
-                            {
-                                sw.Write(newCode);
-                            }
+                            var newCode = rewriter.UpdateNamespaces(File.ReadAllText(item));
+                            File.WriteAllText(item, newCode);
                         }
                     }
-                    if (Inplace && !string.IsNullOrWhiteSpace(config.NameSpaceSuffix) && rewriter.NameSpaces.Any())
+                    if (config.Inplace && !string.IsNullOrWhiteSpace(writerconfig.NameSpaceSuffix) && rewriter.NameSpaces.Any())
                     {
                         foreach (var item in GetDocuments(project))
                         {
-                            string newCode = null;
-                            using (var sr = new StreamReader(item))
-                            {
-                                newCode = rewriter.UpdateNamespaces(sr.ReadToEnd());
-                            }
-
-                            using (var sw = new StreamWriter(item))
-                            {
-                                sw.Write(newCode);
-                            }
+                            var newCode = rewriter.UpdateNamespaces(File.ReadAllText(item));
+                            File.WriteAllText(item, newCode);
                         }
                     }
                 }
@@ -116,7 +100,7 @@ namespace RoslynWeave
         private static string GetWrappedPath(ProjectInSolution project)
         {
             var projectRoot = Path.GetDirectoryName(project.AbsolutePath);
-            return Path.Combine(projectRoot, Inplace ? "" : WrapInFolder);
+            return Path.Combine(projectRoot, config.Inplace ? "" : config.Output);
         }
 
         public static IEnumerable<string> GetDocuments(ProjectInSolution project)
@@ -128,7 +112,7 @@ namespace RoslynWeave
             foreach (var file in Directory.GetFiles(projectRoot, "*.cs", SearchOption.AllDirectories))
             {
                 var item = file.NormalizePath();
-                if (!Inplace && new Uri(CombindPath(newRoot)).IsBaseOf(new Uri(item)))
+                if (!config.Inplace && new Uri(CombindPath(newRoot)).IsBaseOf(new Uri(item)))
                 {
                     continue;
                 }
@@ -160,6 +144,32 @@ namespace RoslynWeave
         public static string NormalizePath(this string path)
         {
             return Path.GetFullPath(path).Replace("\\", "/");
+        }
+        public static void CopySolution(string sourceFolder, string targetFolder)
+        {
+            Directory.CreateDirectory(targetFolder);
+            Directory.Delete(targetFolder, recursive: true);
+            Directory.CreateDirectory(targetFolder);
+            var source = new DirectoryInfo(sourceFolder);
+            var target = new DirectoryInfo(targetFolder);
+            CopyFilesRecursively(source, target);
+        }
+        public static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
+        {
+            foreach (DirectoryInfo dir in source.GetDirectories())
+            {
+                if (dir.Name == "bin" || dir.Name == "obj" || dir.Name.StartsWith("."))
+                {
+                    continue;
+                }
+                CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name)); 
+            }
+            foreach (FileInfo file in source.GetFiles())
+            {
+                var targetFile = Path.Combine(target.FullName, file.Name);
+                Console.WriteLine($"Copying {file.FullName}");
+                file.CopyTo(targetFile); 
+            }
         }
     }
 }

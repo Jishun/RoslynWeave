@@ -112,7 +112,7 @@ namespace RoslynWeaveTests_AopWrapped
         public async Task<IList<int>> Method3Async(int i)
         {
             var aop_generated_metadata_0 = new MethodMetadata(MethodBase.GetCurrentMethod(), ("i", (object)i ?? typeof(int)));
-            AopContextLocator.AopContext.EnterFrame(aop_generated_metadata_0);
+            AopContextLocator.AopContext.EnterFrameAsync(aop_generated_metadata_0);
             try
             {
                 return new List<int>()
