@@ -6,22 +6,22 @@ using System.Threading.Tasks;
 
 namespace RoslynWeave
 {
-    public class DefaultAopContext : IAopContext
+    public class DefaultAopContext<T> : IAopContext where T : new()
     {
-        protected virtual AsyncLocal<AopContextFrame> CurrentFrame { get; set; } =  new AsyncLocal<AopContextFrame>();
+        protected virtual AsyncLocal<AopContextFrame<T>> CurrentFrame { get; set; } =  new AsyncLocal<AopContextFrame<T>>();
 
         public virtual string Location => String.Join(".", GetCurrentStackTrace().Reverse().Select(f => f.ToString()).ToArray());
 
         public virtual void EnterFrame(MethodMetadata metadata)
         {
-            var ret = new AopContextFrame(metadata, NeedsProfile(metadata));
+            var ret = new AopContextFrame<T>(metadata, NeedsProfile(metadata));
             EnteringMethod(metadata);
             Push(ret);
         }
 
         public virtual async Task EnterFrameAsync(MethodMetadata metadata)
         {
-            var ret = new AopContextFrame(metadata, await NeedsProfileAsync(metadata));
+            var ret = new AopContextFrame<T>(metadata, await NeedsProfileAsync(metadata));
             await EnteringMethodAsync(metadata);
             Push(ret);
         }
@@ -50,7 +50,7 @@ namespace RoslynWeave
             return Task.FromResult(false);
         }
 
-        protected virtual void Push(AopContextFrame frame)
+        protected virtual void Push(AopContextFrame<T> frame)
         {
             frame.Parent = CurrentFrame.Value;
             CurrentFrame.Value = frame;
@@ -94,7 +94,7 @@ namespace RoslynWeave
             return false;
         }
 
-        protected virtual IEnumerable<AopContextFrame> GetCurrentStackTrace()
+        protected virtual IEnumerable<AopContextFrame<T>> GetCurrentStackTrace()
         {
             var f = CurrentFrame.Value;
             while (f != null)
