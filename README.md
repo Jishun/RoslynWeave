@@ -4,6 +4,10 @@ An AOP code generator
 # Initiative
 As of now when this project is created, there is no way to intercept Roslyn compilation process, what most people wanted is simply to have a point where we can plug in some pre-compile logic to re-write the code in order to enable AOP, it took too long for .Net to respond so that I have to make another approach to trick it.
 
+# Next Step
+- this news https://devblogs.microsoft.com/dotnet/introducing-c-source-generators/ sounds exciting, hopefully I'll be able to update this framework to add compile time code generation so that the generated code is invisible, 
+- the debugging might still be tricking at the beggining, will look at the options to either try to maintain the line numbers to the pdbs (not sure if possible), or wait for later visualstudio adds support for debugging this, as mentioned in the news 
+
 # Usage
 - Take the code and compile (I'll possibly make a nuget later if I'm able to abstract it well)
 - Execute `RoslynWeaveCli` and give it an argument as the path to a solution file, it will scan all the cs files and put the generated file into `AopManaged` folder of each project, for example [ExampleClass.cs](RoslynWeaveTests/ExampleClass.cs) -> [AopManaged/ExampleClass.cs](RoslynWeaveTests/AopManaged/ExampleClass.cs)
