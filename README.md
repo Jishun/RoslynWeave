@@ -6,7 +6,7 @@ This AOP framework sets up a goal to inject C# code during compile time, by weav
 
 # The code generating approach
 - This libary leverages https://devblogs.microsoft.com/dotnet/introducing-c-source-generators/ to intercept the roslyn compiler so that to generate AOP managed code base on the existing barebone user code
-- HOWEVER, The Source Generator in fact can is designed to only support code analysing and generating, it [doesn't support code-rewritting](https://github.com/dotnet/roslyn/blob/master/docs/features/source-generators.cookbook.md#code-rewriting)
+- HOWEVER, The Source Generator in fact is designed to only support code analysing and generating, it [doesn't support code-rewritting](https://github.com/dotnet/roslyn/blob/master/docs/features/source-generators.cookbook.md#code-rewriting)
 - Therefore, this libary cannot generate new code with AOP enabled to replace your code, instead, it copies all code that's being compiled, apply the AOP wrapping, then generate them into a new separate namespace, by default it names the new namespace with a `_AopManaged` suffix, which means, the AOP and non-AOP code co-exists, to flip between, simply change the using derives from the entry point
 - The using derives inside of generated are updated to reach to the generated namespace
 
@@ -35,8 +35,7 @@ This AOP framework sets up a goal to inject C# code during compile time, by weav
     <ProjectReference Include="..\RoslynWeave\RoslynWeave.csproj" />
   </ItemGroup>
 ```
-Or 
-_ Implement a class deriving [AopContextFrame](RoslynWeave/CodeFramework/AopContextFrame.cs)
+- Implement a class deriving [AopContextFrame](RoslynWeave/CodeFramework/AopContextFrame.cs)
 - Implement a class inheriting [DefaultAopContext](RoslynWeave/CodeFramework/DefaultAopContext.cs), override the 8 intercept points to handle your AOP
 * EnteringMethodAsync
 * EnteringMethod
@@ -49,7 +48,7 @@ _ Implement a class deriving [AopContextFrame](RoslynWeave/CodeFramework/AopCont
 - Give this class to [AopContextLocator](RoslynWeave/AopContextLocator.cs) with a factory method
 - In the context class, the `CurrentFrame` object will provide metadata of current method, including the MehtodBase, as well as the parameters passed in
 - `GetCurrentStackTrace()` returns the stack trace based on all frames it went through.
-- Weavers and Aspects and Advice will come to help later
+- Weavers and Aspects and Advice may come to help later
 ```cs
 
     public class MyContext: DefaultAopContext
@@ -97,7 +96,7 @@ _ Implement a class deriving [AopContextFrame](RoslynWeave/CodeFramework/AopCont
 
 ## How it works
 - Instead of weaving to specific method with specific logic at compile time, it weaves "Management" to all the method so that inteception can be handled at run time.
-- It re-writes all the methods to wrap in a predefined template (essentially try/catch with error handling), and point the interception points to [IAopContext](RoslynWeave/IAopContext.cs) interface provided to the method by [AopContextLocator](RoslynWeave/AopContextLocator.cs) with an `AsyncLocal`
+- It re-writes all the methods to wrap in a predefined template (essentially try/catch with error handling), and point the interception points to [IAopContext](RoslynWeave/CodeFramework/IAopContext.cs) interface provided to the method by [AopContextLocator](RoslynWeave/CodeFramework/AopContextLocator.cs) with an `AsyncLocal`
 - In order to let the new code get compiled without modifying and tracking the original code, it's a trick to use the code rewriter to write a duplication of each `cs` file, with changing the namespace to avoid conflicts.
 - for instance, if you have class defined in a file with namespace `ExampleNamespace`, with the default config it will generate another class with the same name but in namespace `ExampleNamespace_AopWrapped`, and also checks all the `using`s in all files that it processes, change to `using ExampleNamespace_AopWrapped;` if it sees `using ExampleNamespace;`, the new generate files are put into `AopManaged` folder with the same structure
 
