@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using RoslynWeave;
 
-namespace RoslynWeaveTests
+namespace RoslynWeaveExample
 {
     public abstract class ExampleClass<T>
     {
@@ -13,7 +14,7 @@ namespace RoslynWeaveTests
             Console.Write(a);
         }
         #region
-        public TT Method1<TT>( TT input)
+        public TT Method1<TT>(TT input)
         {
             var a = "boody";
             Console.Write(a);
@@ -41,9 +42,25 @@ namespace RoslynWeaveTests
             ii = 0;
             return Task.FromResult(i);
         }
+        public async Task<int> Method6Async(int i)
+        {
+            var ret = await Task.FromResult(i);
+            return ret;
+        }
+        public virtual int VirtualMethod()
+        {
+            return 1;
+        }
+
+        [AopIgnore]
+        public int IgnoredByAttribute()
+        {
+            return 1;
+        }
 #endif
         public abstract void AbstractMethod();
-        public int GetInt() => 1;
+        public virtual int VirtualLambda() => 1;
+        public int GetIntLambda() => 1;
 
     }
 }

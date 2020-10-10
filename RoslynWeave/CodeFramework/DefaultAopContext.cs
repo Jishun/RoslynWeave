@@ -6,22 +6,36 @@ using System.Threading.Tasks;
 
 namespace RoslynWeave
 {
-    public class DefaultAopContext<T> : IAopContext where T : new()
+    public class DefaultAopContext<TFrame> : IAopContext where TFrame : AopContextFrame<TFrame>, new()
     {
-        protected virtual AsyncLocal<AopContextFrame<T>> CurrentFrame { get; set; } =  new AsyncLocal<AopContextFrame<T>>();
+        protected virtual AopContextFrame<TFrame>.ConstructorDelegate FrameFactory { get; }
+        protected virtual AsyncLocal<TFrame> CurrentFrame { get; set; } =  new AsyncLocal<TFrame>();
 
         public virtual string Location => String.Join(".", GetCurrentStackTrace().Reverse().Select(f => f.ToString()).ToArray());
 
+        public DefaultAopContext(AopContextFrame<TFrame>.ConstructorDelegate frameFactory)
+        {
+            if (FrameFactory == null)
+            {
+                if (frameFactory == null)
+                {
+                    frameFactory = (MethodMetadata method, bool profile) => (TFrame)Activator.CreateInstance(typeof(TFrame), new object[] { method, profile });
+                }
+
+                FrameFactory = frameFactory;
+            }
+        }
+
         public virtual void EnterFrame(MethodMetadata metadata)
         {
-            var ret = new AopContextFrame<T>(metadata, NeedsProfile(metadata));
+            var ret = FrameFactory(metadata, NeedsProfile(metadata));
             EnteringMethod(metadata);
             Push(ret);
         }
 
         public virtual async Task EnterFrameAsync(MethodMetadata metadata)
         {
-            var ret = new AopContextFrame<T>(metadata, await NeedsProfileAsync(metadata));
+            var ret = FrameFactory(metadata, await NeedsProfileAsync(metadata));
             await EnteringMethodAsync(metadata);
             Push(ret);
         }
@@ -50,7 +64,7 @@ namespace RoslynWeave
             return Task.FromResult(false);
         }
 
-        protected virtual void Push(AopContextFrame<T> frame)
+        protected virtual void Push(TFrame frame)
         {
             frame.Parent = CurrentFrame.Value;
             CurrentFrame.Value = frame;
@@ -94,7 +108,7 @@ namespace RoslynWeave
             return false;
         }
 
-        protected virtual IEnumerable<AopContextFrame<T>> GetCurrentStackTrace()
+        protected virtual IEnumerable<AopContextFrame<TFrame>> GetCurrentStackTrace()
         {
             var f = CurrentFrame.Value;
             while (f != null)

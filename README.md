@@ -2,18 +2,42 @@
 An AOP code generator
 
 # Initiative
-As of now when this project is created, there is no way to intercept Roslyn compilation process, what most people wanted is simply to have a point where we can plug in some pre-compile logic to re-write the code in order to enable AOP, it took too long for .Net to respond so that I have to make another approach to trick it.
+This AOP framework sets up a goal to inject C# code during compile time, by weaving with original C# code instead of IL it provides a much higher reliability and ease of use
+
+# The code generating approach
+- This libary leverages https://devblogs.microsoft.com/dotnet/introducing-c-source-generators/ to intercept the roslyn compiler so that to generate AOP managed code base on the existing barebone user code
+- HOWEVER, The Source Generator in fact can is designed to only support code analysing and generating, it [doesn't support code-rewritting](https://github.com/dotnet/roslyn/blob/master/docs/features/source-generators.cookbook.md#code-rewriting)
+- Therefore, this libary cannot generate new code with AOP enabled to replace your code, instead, it copies all code that's being compiled, apply the AOP wrapping, then generate them into a new separate namespace, by default it names the new namespace with a `_AopManaged` suffix, which means, the AOP and non-AOP code co-exists, to flip between, simply change the using derives from the entry point
+- The using derives inside of generated are updated to reach to the generated namespace
+
+# The AOP Approach
+- In [CodeFramework](RoslynWeave/CodeFramework) it defines a set of AOP related classes, called by method at entering or leaving or on-error, 
+- The method are rewritten by the intercepter to get the method body wrapped accordingly to the [WrapperTemplate.cs](RoslynWeave/CodeRewriter/WrapperTemplate.cs), the actual method body will be placed into where line `Body();` is, which is inside of a try catch statemtment with standard AOP code inplace as well
+- The WrapperTemplate can be customized, it is only required to have `SyncMethod` and `AsyncMethod` implemented with `Body();` line
+- It will soon be made able to accept a configured external template in the project
+- Using `AopIgnore` attribute will exclude the code rewritting on class or individual method
+
+# It needs .NET5.0 compiler to work !!
+
+# Example
+- Clone this project and build it with `dotnet` version 5, the RoslynWeaveTests project will intercepted and added with new namespaces
+- The test (inprogress) shows calling to generated code
 
 # Next Step
-- this news https://devblogs.microsoft.com/dotnet/introducing-c-source-generators/ sounds exciting, hopefully I'll be able to update this framework to add compile time code generation so that the generated code is invisible, 
 - the debugging might still be tricking at the beggining, will look at the options to either try to maintain the line numbers to the pdbs (not sure if possible), or wait for later visualstudio adds support for debugging this, as mentioned in the news 
 
-# Usage
-- Take the code and compile (I'll possibly make a nuget later if I'm able to abstract it well)
-- Execute `RoslynWeaveCli` and give it an argument as the path to a solution file, it will scan all the cs files and put the generated file into `AopManaged` folder of each project, for example [ExampleClass.cs](RoslynWeaveTests/ExampleClass.cs) -> [AopManaged/ExampleClass.cs](RoslynWeaveTests/AopManaged/ExampleClass.cs)
-- The above process will skip `program.cs` files
-- In `program.cs` change the using statement of the affected namespace and append `_AopWrapped` to it to use AOP, it will not take any changes if the namespace is unchanged, so that you can flip the use of it.
-- Implement a class inheriting [DefaultAopContext](RoslynWeave/DefaultAopContext.cs), override the 8 intercept points to handle your AOP
+# Usage 
+- Take the code and compile RoslynWeave (I'll make a nuget later)
+- Use it as both Analyzer item and project reference : 
+```
+ <ItemGroup>
+    <ProjectReference Include="..\RoslynWeave\RoslynWeave.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\RoslynWeave\RoslynWeave.csproj" />
+  </ItemGroup>
+```
+Or 
+_ Implement a class deriving [AopContextFrame](RoslynWeave/CodeFramework/AopContextFrame.cs)
+- Implement a class inheriting [DefaultAopContext](RoslynWeave/CodeFramework/DefaultAopContext.cs), override the 8 intercept points to handle your AOP
 * EnteringMethodAsync
 * EnteringMethod
 * ExitingMethodAsync
@@ -71,14 +95,6 @@ As of now when this project is created, there is no way to intercept Roslyn comp
     }
 ```
 
-# In-place mode
-- Use [CodeRewriterConfig.cs](RoslynWeave/CodeRewriter/CodeRewriterConfig.cs)
-- If you don't mind seeing the generated try/catch in every method, set 'Track = true' to let the re-writer to re-write your original file, it will try to track the method with a first line of comment to prevent wrapping the method multiple times.
-- It provides option to enable tracking, the `TrackingStatement` contains a comment(default "//Aop omit"), the rewriter uses a simplest way to detect the first line comments, if the first line of the method is this comment, it skips re-writing the method.
-- Set the `NameSpaceSuffix` to null or Empty so that namespace stays unchanged.
-- MAKE SURE you have source control to track the change so that you can revert the change if it's not desired.
-
-
 ## How it works
 - Instead of weaving to specific method with specific logic at compile time, it weaves "Management" to all the method so that inteception can be handled at run time.
 - It re-writes all the methods to wrap in a predefined template (essentially try/catch with error handling), and point the interception points to [IAopContext](RoslynWeave/IAopContext.cs) interface provided to the method by [AopContextLocator](RoslynWeave/AopContextLocator.cs) with an `AsyncLocal`
@@ -88,8 +104,7 @@ As of now when this project is created, there is no way to intercept Roslyn comp
 Therefore in order to use it, use the `_AopWrapped` namespace in the program
 
 # How to customize it
-- [program.cs of the Cli](RoslynWeaveCli/Program.cs) has a very basic main to iterate through files,  take the file make your own cli to find the files and store the output in your way
-- Use the default wrapper to manage the code then derive from [DefaultAopContext](RoslynWeave/DefaultAopContext.cs) to make interception
+- Use the default wrapper to manage the code then derive from [DefaultAopContext](RoslynWeave/CodeFramework/DefaultAopContext.cs) to make interception
 
 - Or, Derive from [WrapperTemplate.cs](RoslynWeave/CodeRewriter/WrapperTemplate.cs), give the source code as string to [TemplateExtractor.cs](RoslynWeave/CodeRewriter/TemplateExtractor.cs) with a factory method.
 - then the code rewriter will use your way to wrap the methods,
@@ -100,10 +115,10 @@ Therefore in order to use it, use the `_AopWrapped` namespace in the program
 - [CodeRewriterConfig.cs](RoslynWeave/CodeRewriter/CodeRewriterConfig.cs) contains a very basic configuration, will extend it soon.
 
 ## Limitations
-It's built as an intermediary solution while I'm waiting for .Net to release an intercept feature of the compiler. so it's expected to have limitations, I can't find a perfect solution except IL weaving, but, IL is too difficult to write and debug for many people. is impossible to me..
+It's built as an intermediary solution while I'm waiting for .Net to release an intercept feature of the compiler. so it's expected to have limitations, I can't find a perfect solution except IL weaving, but, IL is too difficult to write and debug for many people. is impossible to me.
 - It enlarges the codebase to more than twice, as it duplicates all files, and wraps all method bodies with try/catch
 - It only deals with the typical coding style. for example if you prefer to use class full name in method instead of `using` at the begging, at least the first (current) version is unable to find and point to  
-- At this (initial) stage of the project, I haven't implemented any weaving logic, nor any `Advice`s, `Aspect`s.
+- At this (initial) stage of the project, I haven't implemented any weaving logic, nor any `Advice`s, `Aspect`s. This can be added on top of this basic framework
 
 ## Something good about this trick
 - `DynamicProxy` does a similar work to intecept class member invokations at run time, it is easier to use but it can't intercept method calls within a class

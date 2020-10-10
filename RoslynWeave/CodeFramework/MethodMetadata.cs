@@ -16,5 +16,4 @@ namespace RoslynWeave
             Parameters = new ReadOnlyDictionary<string, object>(paramters.ToDictionary(p => p.name, p => p.value));
         }
     }
-
 }

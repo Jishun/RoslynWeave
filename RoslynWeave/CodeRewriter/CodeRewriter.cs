@@ -6,18 +6,20 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
-namespace RoslynWeave
+namespace RoslynWeave.CodeReWriter
 {
     public class CodeRewriter : CSharpSyntaxRewriter
     {
         private readonly TemplateExtractor Templates = new TemplateExtractor();
         private readonly CodeRewriterConfig _config;
+        private readonly RoslynWeaveLogger _logger;
 
         public IDictionary<string, string> NameSpaces = new Dictionary<string, string>();
 
         public CodeRewriter(CodeRewriterConfig config, TemplateExtractor extractor)
         {
             _config = config;
+            _logger = new RoslynWeaveLogger(_config.Logger);
             Templates = extractor;
         }
 
@@ -25,6 +27,11 @@ namespace RoslynWeave
         {
             var tree = CSharpSyntaxTree.ParseText(code);
             var root = tree.GetRoot();
+            return Wrap(root);
+        }
+
+        public string Wrap(SyntaxNode root)
+        {
             foreach (var item in Templates.Usings)
             {
                 root = ((CompilationUnitSyntax)root).AddUsingIfNotExist(item);
@@ -60,6 +67,11 @@ namespace RoslynWeave
 
         public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
         {
+            if (node.IsIgnored())
+            { 
+                _logger.WriteLine($"Node {node.Identifier.ToFullString()} is skipped due to attribute ignore");
+                return node;
+            }
             var newIdentifier = CreateAopIdentifier(node.Identifier);
             var newNode = node.ReplaceToken(node.Identifier, newIdentifier);
             return base.VisitClassDeclaration(newNode);
@@ -67,6 +79,11 @@ namespace RoslynWeave
 
         public override SyntaxNode VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
         {
+            if (node.IsIgnored())
+            {
+                _logger.WriteLine($"Node {node.Identifier.ToFullString()} is skipped due to attribute ignore");
+                return node;
+            }
             var arguments = node.ParameterList.Parameters.Select(p => p.Identifier.ValueText);
             var newIdentifier = CreateAopIdentifier(node.Identifier);
             var newNode = node.ReplaceToken(node.Identifier, newIdentifier)
@@ -76,6 +93,11 @@ namespace RoslynWeave
 
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
+            if (node.IsIgnored())
+            {
+                _logger.WriteLine($"Node {node.Identifier.ToFullString()} is skipped due to attribute ignore");
+                return node;
+            }
             if (node.Body == null)
             {
                 return node;
@@ -117,13 +139,6 @@ namespace RoslynWeave
             {
                 return original;
             }
-            if (_config.Track)
-            {
-                if (original.Statements.First().GetLeadingTrivia().ToString().Trim() == _config.TrackingStatement)
-                {
-                    return original;
-                }
-            }
             if (!_config.UseAsyncIntercepters)
             {
                 async = false;
@@ -141,10 +156,6 @@ namespace RoslynWeave
                 nodes = nodes.Prepend(template.MetaData);
             }
             var ret = template.Body.TrackNodes(nodes);
-            if (_config.Track)
-            {
-                ret = ret.WithOpenBraceToken(Token(TriviaList(), SyntaxKind.OpenBraceToken, TriviaList(Comment(Environment.NewLine + _config.TrackingStatement))));
-            }
             ret = ret.ReplaceNode(ret.GetCurrentNode(template.MetaData), template.MetaData.AddArgumentListArguments(ParseArgumentList(ps).Arguments.ToArray()));
             foreach (var item in template.OriginalBodies)
             {

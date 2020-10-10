@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RoslynWeaveTemplate;
 
-namespace RoslynWeave
+namespace RoslynWeave.CodeReWriter
 {
     public class TemplateExtractor : CSharpSyntaxRewriter
     {
