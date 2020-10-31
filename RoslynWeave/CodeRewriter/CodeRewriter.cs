@@ -56,12 +56,13 @@ namespace RoslynWeave.CodeReWriter
 
         public override SyntaxNode VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
         {
-            var identifier = ((IdentifierNameSyntax)node.Name).Identifier;
+            var newNode = node;
+            var identifier = node.Name.DescendantNodes().OfType<IdentifierNameSyntax>().First().Identifier;
             var newIdentifier = CreateAopIdentifier(identifier, _config.NameSpaceSuffix);
 
             NameSpaces[identifier.ValueText] = newIdentifier.ValueText;
 
-            var newNode = node.WithName(node.Name.ReplaceToken(identifier, newIdentifier));
+            newNode = node.WithName(node.Name.ReplaceToken(identifier, newIdentifier));
             return base.VisitNamespaceDeclaration(newNode);
         }
 

@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 namespace RoslynWeave
 {
@@ -15,27 +17,34 @@ namespace RoslynWeave
         /// <param name="profile"></param>
         /// <returns></returns>
         public delegate TFrame ConstructorDelegate(MethodMetadata method, bool profile = false);
+        public bool Profile { get; }
 
         public MethodMetadata Method { get; }
         public TFrame Parent { get; set; }
         public string MessageOnException { get; set; }
         public IDictionary<string, string> Tags { get; set; }
-        public override string ToString() => $"{Method.MethodBase.DeclaringType.Name}.{Method.MethodBase.Name}";
+        public override string ToString() => $"{Method?.MethodBase?.DeclaringType?.Name?.Replace("<", "0")?.Replace(">", "0")}.{Method?.MethodBase?.Name?.Replace("<", "0")?.Replace(">", "0")}";
 
-        public AopContextFrame(MethodMetadata method, bool profile = false)
+        public AopContextFrame(bool profile = false) 
         {
-            Method = method;
             if (profile)
             {
                 _timer = new Stopwatch();
                 _timer.Start();
             }
+
+            Profile = profile;
         }
 
-        public double GetTimeSpent()
+        public AopContextFrame(MethodMetadata method, bool profile = false) : this(profile)
+        {
+            Method = method;
+        }
+
+        public double? GetTimeSpent()
         {
             _timer?.Stop();
-            return _timer.ElapsedTicks;
+            return _timer?.ElapsedTicks;
         }
     }
 }

@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Collections;
 using System.Threading.Tasks;
 
 namespace RoslynWeave
 {
     public interface IAopContext
     {
-        bool TryHandleException(Exception data);
-        Task<bool> TryHandleExceptionAsync(Exception data);
+        ExceptionHandling TryHandleException(Exception data, int retried);
+        Task<ExceptionHandling> TryHandleExceptionAsync(Exception data, int retried);
         void EnterFrame(MethodMetadata metadata);
         Task EnterFrameAsync(MethodMetadata metadata);
         void ExitFrame();

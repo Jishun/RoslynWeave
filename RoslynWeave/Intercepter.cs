@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-
 namespace RoslynWeave.CodeReWriter
 {
     [Generator]
@@ -26,9 +27,12 @@ namespace RoslynWeave.CodeReWriter
             {
                 if (context.Compilation.SyntaxTrees.Any())
                 {
-                    DiagnoseLogPath = Path.Combine(Path.GetDirectoryName(context.Compilation.SyntaxTrees.First().FilePath), "../aop/");
+                    DiagnoseLogPath = Path.Combine(Path.GetDirectoryName(context.Compilation.SyntaxTrees.First().FilePath), "../aop/", context.Compilation.AssemblyName + "/");
                 }
 
+                Directory.CreateDirectory(DiagnoseLogPath);
+                File.WriteAllText($"{DiagnoseLogPath}log.txt", context.Compilation.SourceModule.Name);
+                Log("RoslynWeave intercepting");
                 var syntaxReceiver = (RoslynWeaveSyntaxReceiver)context.SyntaxReceiver;
                 foreach (var rootNode in syntaxReceiver.RootNodes)
                 {

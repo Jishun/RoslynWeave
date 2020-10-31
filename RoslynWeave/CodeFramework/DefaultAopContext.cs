@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 
 namespace RoslynWeave
 {
-    public class DefaultAopContext<TFrame> : IAopContext where TFrame : AopContextFrame<TFrame>, new()
+    public class DefaultAopContext<TFrame> : IAopContext where TFrame : AopContextFrame<TFrame>
     {
         protected virtual AopContextFrame<TFrame>.ConstructorDelegate FrameFactory { get; }
-        protected virtual AsyncLocal<TFrame> CurrentFrame { get; set; } =  new AsyncLocal<TFrame>();
+        protected virtual AsyncLocal<TFrame> _currentFrame { get; set; } =  new AsyncLocal<TFrame>();
 
         public virtual string Location => String.Join(".", GetCurrentStackTrace().Reverse().Select(f => f.ToString()).ToArray());
+        public virtual TFrame CurrentFrame => _currentFrame?.Value;
 
         public DefaultAopContext(AopContextFrame<TFrame>.ConstructorDelegate frameFactory)
         {
@@ -42,39 +43,46 @@ namespace RoslynWeave
 
         public virtual void ExitFrame()
         {
-            var frame = CurrentFrame.Value;
-            Pop();
+            var frame = _currentFrame.Value;
             ExitingMethod(frame.Method, frame?.GetTimeSpent() ?? 0);
+            Pop();
         }
 
         public virtual async Task ExitFrameAsync()
         {
-            var frame = CurrentFrame.Value;
-            Pop();
+            var frame = _currentFrame.Value;
             await ExitingMethodAsync(frame.Method, frame?.GetTimeSpent() ?? 0);
+            Pop();
         }
 
-        public virtual bool TryHandleException(Exception data)
+        public virtual ExceptionHandling TryHandleException(Exception data, int retried)
         {
-            return false;
+            return ExceptionHandling.Throw;
         }
 
-        public virtual Task<bool> TryHandleExceptionAsync(Exception data)
+        public virtual Task<ExceptionHandling> TryHandleExceptionAsync(Exception data, int retried)
         {
-            return Task.FromResult(false);
+            return Task.FromResult(ExceptionHandling.Throw);
         }
-
-        protected virtual void Push(TFrame frame)
+        public virtual IEnumerable<TFrame> GetCurrentStackTrace()
         {
-            frame.Parent = CurrentFrame.Value;
-            CurrentFrame.Value = frame;
-        }
-
-        protected virtual void Pop()
-        {
-            if (CurrentFrame.Value != null)
+            var f = _currentFrame.Value;
+            while (f != null)
             {
-                CurrentFrame.Value = CurrentFrame.Value.Parent;
+                yield return f;
+                f = f.Parent;
+            }
+        }
+        public virtual void Push(TFrame frame)
+        {
+            frame.Parent = _currentFrame.Value;
+            _currentFrame.Value = frame;
+        }
+        public virtual void Pop()
+        {
+            if (_currentFrame.Value != null)
+            {
+                _currentFrame.Value = _currentFrame.Value.Parent;
             }
         }
 
@@ -108,14 +116,5 @@ namespace RoslynWeave
             return false;
         }
 
-        protected virtual IEnumerable<AopContextFrame<TFrame>> GetCurrentStackTrace()
-        {
-            var f = CurrentFrame.Value;
-            while (f != null)
-            {
-                yield return f;
-                f = f.Parent;
-            }
-        }
     }
 }

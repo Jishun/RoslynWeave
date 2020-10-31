@@ -10,6 +10,10 @@ namespace RoslynWeave
         static AsyncLocal<IAopContext> AopContextInternal = new AsyncLocal<IAopContext>();
         public static IAopContext AopContext => AopContextInternal.Value ?? (AopContextInternal.Value = Factory?.Invoke());
 
+        public static void Initialize(IAopContext context)
+        {
+            AopContextInternal.Value = context;
+        }
         public static void Initialize(Func<IAopContext> factory)
         {
             Factory = factory;

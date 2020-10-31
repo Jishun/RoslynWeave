@@ -27,6 +27,7 @@ This AOP framework sets up a goal to inject C# code during compile time, by weav
 - the debugging might still be tricking at the beggining, will look at the options to either try to maintain the line numbers to the pdbs (not sure if possible), or wait for later visualstudio adds support for debugging this, as mentioned in the news 
 
 # Usage 
+## The basic use of the application is to generate and weave code to the code being compiled. according to [WrapperTemplate.cs](RoslynWeave/CodeRewriter/WrapperTemplate.cs), it's free to take the code and write up your own template to fit your work, below only describles how to use the built in `WrapperTemplate`
 - Take the code and compile RoslynWeave (I'll make a nuget later)
 - Use it as both Analyzer item and project reference : 
 ```
