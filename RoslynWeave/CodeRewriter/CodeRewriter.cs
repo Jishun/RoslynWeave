@@ -10,6 +10,7 @@ namespace RoslynWeave.CodeReWriter
 {
     public class CodeRewriter : CSharpSyntaxRewriter
     {
+        public string ComponnetName { get; private set; }
         private readonly TemplateExtractor Templates = new TemplateExtractor();
         private readonly CodeRewriterConfig _config;
         private readonly RoslynWeaveLogger _logger;
@@ -68,8 +69,9 @@ namespace RoslynWeave.CodeReWriter
 
         public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
         {
+            ComponnetName = ComponnetName ?? node.Identifier.ToFullString();
             if (node.IsIgnored())
-            { 
+            {
                 _logger.WriteLine($"Node {node.Identifier.ToFullString()} is skipped due to attribute ignore");
                 return node;
             }
@@ -78,8 +80,25 @@ namespace RoslynWeave.CodeReWriter
             return base.VisitClassDeclaration(newNode);
         }
 
+        public override SyntaxNode VisitStructDeclaration(StructDeclarationSyntax node)
+        {
+            ComponnetName = ComponnetName ?? node.Identifier.ToFullString();
+            if (node.IsIgnored())
+            {
+                _logger.WriteLine($"Node {node.Identifier.ToFullString()} is skipped due to attribute ignore");
+                return node;
+            }
+            var newIdentifier = CreateAopIdentifier(node.Identifier);
+            var newNode = node.ReplaceToken(node.Identifier, newIdentifier);
+            return base.VisitStructDeclaration(newNode);
+        }
+
         public override SyntaxNode VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
         {
+            if (!_config.IncludeConstructors)
+            {
+                return node;
+            }
             if (node.IsIgnored())
             {
                 _logger.WriteLine($"Node {node.Identifier.ToFullString()} is skipped due to attribute ignore");

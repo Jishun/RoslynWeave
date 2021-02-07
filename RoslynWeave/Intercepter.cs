@@ -19,20 +19,33 @@ namespace RoslynWeave.CodeReWriter
         CodeRewriterConfig config;
         CodeRewriter rewriter;
         GeneratorExecutionContext currentContext;
-        IList<string> newSourceCode = new List<string>();
+        IList<KeyValuePair<string, string>> newSourceCode = new List<KeyValuePair<string, string>>();
         public void Execute(GeneratorExecutionContext context)
         {
             currentContext = context;
             try
             {
+                context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.AopWeaverRoslynEnabled", out var enabled);
+                context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.AopWeaverRoslynIncludeConstructors", out var includeConstructors);
+                context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.AopWeaverRoslynNameSpaceSuffix", out var suffix);
+
                 if (context.Compilation.SyntaxTrees.Any())
                 {
-                    DiagnoseLogPath = Path.Combine(Path.GetDirectoryName(context.Compilation.SyntaxTrees.First().FilePath), "../aop/", context.Compilation.AssemblyName + "/");
+                    //the last file path will be at the output directory
+                    DiagnoseLogPath = Path.Combine(Path.GetDirectoryName(context.Compilation.SyntaxTrees.Last().FilePath), "../../../../aoptemp/", context.Compilation.AssemblyName + "/");
                 }
 
                 Directory.CreateDirectory(DiagnoseLogPath);
-                File.WriteAllText($"{DiagnoseLogPath}log.txt", context.Compilation.SourceModule.Name);
+                FileLog($"Enabled:{enabled}",
+                    context.Compilation.SourceModule.Name
+                ); 
+                if (enabled != "true")
+                {
+                    return;
+                }
                 Log("RoslynWeave intercepting");
+                bool.TryParse(includeConstructors, out config.IncludeConstructors);
+                config.NameSpaceSuffix = (suffix ?? config.NameSpaceSuffix).Trim();
                 var syntaxReceiver = (RoslynWeaveSyntaxReceiver)context.SyntaxReceiver;
                 foreach (var rootNode in syntaxReceiver.RootNodes)
                 {
@@ -43,15 +56,16 @@ namespace RoslynWeave.CodeReWriter
                         continue;
                     }
                     var newCode = rewriter.Wrap(rootNode);
-                    newSourceCode.Add(newCode);
-
+                    newSourceCode.Add(new KeyValuePair<string, string>(rewriter.ComponnetName.Trim(), newCode));
                 }
                 foreach (var item in newSourceCode)
                 {
-                    var newCode = rewriter.UpdateNamespaces(item);
+                    var newCode = rewriter.UpdateNamespaces(item.Value);
                     var sourceText = SourceText.From(newCode, Encoding.UTF8);
-                    context.AddSource($"AopManaged_{index++}.cs", sourceText);
-                    File.WriteAllText($"{DiagnoseLogPath}output_{index++}.cs", newCode);
+                    var fileName = $"{item.Key}{config.NameSpaceSuffix}_{index++}.cs";
+                    FileLog($"Writing {fileName}");
+                    context.AddSource(fileName, sourceText);
+                    File.WriteAllText($"{DiagnoseLogPath}{fileName}", newCode);
                 }
             }
             catch (Exception ex)
@@ -98,6 +112,11 @@ namespace RoslynWeave.CodeReWriter
                                             DiagnosticSeverity.Info,
                                             isEnabledByDefault: true)
                                         ), Location.None, typeof(Intercepter).FullName, message));
+        }
+
+        private void FileLog(params string[] messages)
+        {
+            File.WriteAllLines($"{DiagnoseLogPath}log.txt", messages);
         }
     }
 

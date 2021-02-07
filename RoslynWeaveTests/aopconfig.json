@@ -1,0 +1,6 @@
+{
+  "Enabled": true,
+  "IncludeConstructors": false,
+  "UseAsyncIntercepters": false,
+  "NameSpaceSuffix": "_AopManaged"
+}

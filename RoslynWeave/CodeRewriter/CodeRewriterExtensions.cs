@@ -23,7 +23,7 @@ namespace RoslynWeave.CodeReWriter
             if (node.AttributeLists.Count > 0 &&
                 node.AttributeLists.First().Attributes.Count > 0)
             {
-                if (node.AttributeLists.First().Attributes.Any(a => a.Name.ToFullString().StartsWith(nameof(AopIgnoreAttribute).Replace("Attribute", ""))))
+                if (node.AttributeLists.First().Attributes.Any(a => a.Name.ToFullString().Contains(nameof(AopIgnoreAttribute).Replace("Attribute", ""))))
                 {
                     return true;
                 }

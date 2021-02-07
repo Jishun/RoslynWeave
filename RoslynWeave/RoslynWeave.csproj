@@ -2,14 +2,28 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild> 
-    <IncludeBuildOutput>false</IncludeBuildOutput> 
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IncludeBuildOutput>true</IncludeBuildOutput> 
     <LangVersion>Preview</LangVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
+    <PackageId>AopWeaver.Roslyn</PackageId>
+    <Version>0.0.3</Version>
+    <Authors>Jishun</Authors>
+    <CopyRight>Copyright 2020</CopyRight>
+    <PackageTags>Aop Roslyn Analyzer Weaver Framework</PackageTags>
+    <Description>An AOP compile time code generator</Description>
+    <RepositoryUrl>https://github.com/Jishun/RoslynWeave</RepositoryUrl>
+    <PackageLicenseUrl>https://github.com/Jishun/RoslynWeave</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/Jishun/RoslynWeave</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
   
   <ItemGroup>
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="RoslynWeave.props" Pack="true" PackagePath="build"/>
   </ItemGroup>
     
   <ItemGroup>

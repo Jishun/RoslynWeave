@@ -4,8 +4,10 @@ namespace RoslynWeave.CodeReWriter
 {
     public class CodeRewriterConfig
     {
-        public bool UseAsyncIntercepters { get; set; }
-        public string NameSpaceSuffix { get; set; } = "_AopManaged";
+        public bool Enabled { get; set; } = true;
+        public bool UseAsyncIntercepters;
+        public bool IncludeConstructors;
+        public string NameSpaceSuffix = "_AopManaged";
 
         public Action<string> Logger { get; set; }
     }

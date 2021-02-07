@@ -21,32 +21,33 @@ namespace RoslynWeaveTemplate
                 }
                 catch (Exception aop_generated_exByAop)
                 {
-                    switch (AopContextLocator.AopContext.TryHandleException(aop_generated_exByAop, aop_generated_retries))
+                    var aop_generated_handle = AopContextLocator.AopContext.TryHandleException(aop_generated_exByAop, aop_generated_retries);
+                    if (aop_generated_handle == ExceptionHandling.Continue)
                     {
-                        case ExceptionHandling.Continue:
-                            aop_generated_retries = 0;
-                            Default();
-                            break;
-                        case ExceptionHandling.Retry:
-                            aop_generated_retries++;
-                            break;
-                        case ExceptionHandling.Throw:
-                        default:
-                            aop_generated_retries = 0;
-                            break;
+                        aop_generated_retries = 0;
+                        Default();
+                    } 
+                    else if(aop_generated_handle == ExceptionHandling.Retry)
+                    {
+                        aop_generated_retries++;
                     }
-                    throw;
+                    else
+                    {
+                        aop_generated_retries = 0;
+                        throw;
+                    }
                 }
                 finally
                 {
                     AopContextLocator.AopContext.ExitFrame();
                 }
             } while (aop_generated_retries > 0);
+            Default();
         }
 
         public virtual async Task AsyncMethod()
         {
-            int retries = 0;
+            int aop_generated_retries = 0;
             var aop_generated_metadata_0 = new MethodMetadata(MethodBase.GetCurrentMethod());
             await AopContextLocator.AopContext.EnterFrameAsync(aop_generated_metadata_0);
             do
@@ -57,27 +58,28 @@ namespace RoslynWeaveTemplate
                 }
                 catch (Exception exByAop)
                 {
-                    switch (await AopContextLocator.AopContext.TryHandleExceptionAsync(exByAop, retries))
+                    var aop_generated_handle = await AopContextLocator.AopContext.TryHandleExceptionAsync(exByAop, aop_generated_retries);
+                    if (aop_generated_handle == ExceptionHandling.Continue)
                     {
-                        case ExceptionHandling.Continue:
-                            retries = 0;
-                            Default();
-                            break;
-                        case ExceptionHandling.Retry:
-                            retries++;
-                            break;
-                        case ExceptionHandling.Throw:
-                        default:
-                            retries = 0;
-                            break;
+                        aop_generated_retries = 0;
+                        Default();
                     }
-                    throw;
+                    else if (aop_generated_handle == ExceptionHandling.Retry)
+                    {
+                        aop_generated_retries++;
+                    }
+                    else
+                    {
+                        aop_generated_retries = 0;
+                        throw;
+                    }
                 }
                 finally
                 {
                     await AopContextLocator.AopContext.ExitFrameAsync();
                 }
-            } while (retries > 0);
+            } while (aop_generated_retries > 0);
+            Default();
         }
 
         public void Body() { }
